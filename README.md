@@ -1,3 +1,5 @@
+<img width="826" alt="grocery_list_application" src="https://user-images.githubusercontent.com/13613724/60420765-58976b80-9b9d-11e9-81aa-434b3cb8d415.png">
+
 # About
 
 A grocery list application that is built using Backbone.js and Handlebars.js.
