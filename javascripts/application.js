@@ -1,3 +1,10 @@
+const localStorage = window.localStorage;
+function updateLocalStorage(items) {
+  if (!localStorage) { return; }
+
+  localStorage.setItem('items', JSON.stringify(items));
+}
+
 const template = Handlebars.compile($('#items').html());
 Handlebars.registerPartial('item', $('#item').html());
 
@@ -11,6 +18,8 @@ const items = {
 
   empty: function () {
     this.collection = [];
+    updateLocalStorage(this.collection);
+
     this.render();
   },
 
@@ -19,6 +28,7 @@ const items = {
     const item = new ItemModel(itemData);
 
     this.collection.push(item);
+    updateLocalStorage(this.collection);
 
     return item;
   },
@@ -38,6 +48,8 @@ const items = {
     const model = _(this.collection).findWhere({ id: +$e.attr('data-id') });
 
     this.collection = _(this.collection).without(model);
+    updateLocalStorage(this.collection);
+
     this.render();
   },
 
@@ -54,7 +66,21 @@ const items = {
   },
 
   init: function () {
-    this.seedCollection();
+    if (
+      typeof(Storage) === undefined
+      || typeof(Storage) === 'undefined'
+      || localStorage.items === undefined
+    ) {
+      this.seedCollection();
+    } else {
+      const items = JSON.parse(localStorage.getItem('items'));
+
+      items.forEach((itemData) => {
+        const model = new ItemModel(itemData);
+        this.collection.push(model);
+      });
+    }
+
     this.render();
     this.bind();
   },
@@ -73,7 +99,13 @@ $('form').on('submit', function (e) {
   });
 
   const item = items.create(attrs);
-  items.$body.append(Handlebars.partials.item(item.toJSON()));
+
+  if (items.collection.lenght === 1) {
+    items.$body.append(Handlebars.partials.item(item.toJSON()));
+  } else {
+    items.render();
+  }
+
   this.reset();
 });
 
