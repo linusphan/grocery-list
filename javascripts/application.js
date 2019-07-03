@@ -56,6 +56,7 @@ const App = {
 
     const model = this.Items.get(+$(e.target).attr('data-id'));
     this.Items.remove(model);
+    updateLocalStorage(this.Items.toJSON());
   },
 
   bind: function () {
@@ -63,14 +64,28 @@ const App = {
   },
 
   init: function () {
-    this.Items = new ItemsCollection(itemsJSON);
+    if (
+      typeof(Storage) === undefined
+      || typeof(Storage) === 'undefined'
+      || localStorage.items === undefined
+    ) {
+      this.Items = new ItemsCollection(itemsJSON);
+    } else {
+      this.Items = new ItemsCollection();
+
+      let items = JSON.parse(localStorage.getItem('items'));
+      items = _.sortBy(items, 'id');
+
+      items.forEach((itemData) => {
+        this.Items.add(itemData);
+      });
+    }
+
     this.Items.sortByName();
     this.render();
     this.bind();
   },
 };
-
-App.init();
 
 $('form').on('submit', function (e) {
   e.preventDefault();
@@ -83,6 +98,7 @@ $('form').on('submit', function (e) {
   });
 
   const item = App.Items.add(attrs);
+  updateLocalStorage(App.Items.toJSON());
 
   this.reset();
 });
@@ -96,4 +112,7 @@ $('p a').on('click', function (e) {
   e.preventDefault();
 
   App.Items.reset();
+  updateLocalStorage(App.Items.toJSON());
 });
+
+App.init();
