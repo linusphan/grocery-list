@@ -1,92 +1,76 @@
 const localStorage = window.localStorage;
+
 function updateLocalStorage(items) {
   if (!localStorage) { return; }
 
   localStorage.setItem('items', JSON.stringify(items));
 }
 
-const template = Handlebars.compile($('#items').html());
 Handlebars.registerPartial('item', $('#item').html());
 
 const ItemModel = Backbone.Model.extend({
   idAttribute: 'id',
+
+  initialize: function () {
+    this.collection.incrementID();
+    this.set('id', this.collection.lastID);
+  },
 });
 
-const items = {
-  $body: $('tbody'),
-  collection: [],
+const ItemsCollection = Backbone.Collection.extend({
+  lastID: 0,
+  model: ItemModel,
 
-  empty: function () {
-    this.collection = [];
-    updateLocalStorage(this.collection);
-
-    this.render();
-  },
-
-  create: function (itemData) {
-    itemData.id = this.collection.length + 1;
-    const item = new ItemModel(itemData);
-
-    this.collection.push(item);
-    updateLocalStorage(this.collection);
-
-    return item;
-  },
-
-  seedCollection: function () {
-    itemsJSON.forEach(this.create.bind(this));
-  },
-
-  render: function () {
-    this.$body.html(template({ items: this.collection }));
-  },
-
-  remove: function (e) {
-    e.preventDefault();
-
-    const $e = $(e.currentTarget);
-    const model = _(this.collection).findWhere({ id: +$e.attr('data-id') });
-
-    this.collection = _(this.collection).without(model);
-    updateLocalStorage(this.collection);
-
-    this.render();
+  incrementID: function () {
+    this.lastID++;
   },
 
   sortBy: function (prop) {
-    this.collection = _(this.collection).sortBy(function (model) {
+    this.models = _(this.models).sortBy(function (model) {
       return model.attributes[prop];
     });
 
-    this.render();
+    App.render();
+  },
+
+  sortByName: function () {
+    this.sortBy('name');
+  },
+
+  initialize: function () {
+    this.on('remove reset', App.render.bind(App));
+    this.on('add', this.sortByName);
+  },
+});
+
+const App = {
+  $body: $('tbody'),
+  template: Handlebars.compile($('#items').html()),
+
+  render: function () {
+    this.$body.html(this.template({ items: this.Items.models }));
+  },
+
+  removeItem: function (e) {
+    e.preventDefault();
+
+    const model = this.Items.get(+$(e.target).attr('data-id'));
+    this.Items.remove(model);
   },
 
   bind: function () {
-    this.$body.on('click', 'a', this.remove.bind(this));
+    this.$body.on('click', 'a', this.removeItem.bind(this));
   },
 
   init: function () {
-    if (
-      typeof(Storage) === undefined
-      || typeof(Storage) === 'undefined'
-      || localStorage.items === undefined
-    ) {
-      this.seedCollection();
-    } else {
-      const items = JSON.parse(localStorage.getItem('items'));
-
-      items.forEach((itemData) => {
-        const model = new ItemModel(itemData);
-        this.collection.push(model);
-      });
-    }
-
+    this.Items = new ItemsCollection(itemsJSON);
+    this.Items.sortByName();
     this.render();
     this.bind();
   },
 };
 
-items.init();
+App.init();
 
 $('form').on('submit', function (e) {
   e.preventDefault();
@@ -98,24 +82,18 @@ $('form').on('submit', function (e) {
     attrs[input.name] = input.value;
   });
 
-  const item = items.create(attrs);
-
-  if (items.collection.lenght === 1) {
-    items.$body.append(Handlebars.partials.item(item.toJSON()));
-  } else {
-    items.render();
-  }
+  const item = App.Items.add(attrs);
 
   this.reset();
 });
 
 $('th').on('click', function () {
   const prop = $(this).attr('data-prop');
-  items.sortBy(prop);
+  App.Items.sortBy(prop);
 });
 
 $('p a').on('click', function (e) {
   e.preventDefault();
 
-  items.empty();
+  App.Items.reset();
 });
