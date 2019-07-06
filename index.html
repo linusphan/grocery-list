@@ -7,9 +7,9 @@
 
     <link rel="stylesheet" href="stylesheets/page.css" />
 
+    <script src="javascripts/jquery-3.4.1.js"></script>
     <script src="javascripts/underscore.js"></script>
     <script src="javascripts/backbone.js"></script>
-    <script src="javascripts/jquery-3.4.1.js"></script>
     <script src="javascripts/handlebars-v4.1.2.js"></script>
   </head>
   <body>
@@ -41,9 +41,7 @@
 
     <script id="items" type="text/x-handlebars">
       {{#each items}}
-        {{#with attributes}}
-          {{> item}}
-        {{/with}}
+        {{> item}}
       {{/each}}
     </script>
 

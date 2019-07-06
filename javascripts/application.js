@@ -17,6 +17,30 @@ const ItemModel = Backbone.Model.extend({
   },
 });
 
+const ItemsView = Backbone.View.extend({
+  el: 'tbody',
+  template: Handlebars.compile($('#items').html()),
+  events: {
+    'click a': 'removeItem',
+  },
+
+  render: function () {
+    this.$el.html(this.template({ items: this.collection.toJSON() }));
+  },
+
+  removeItem: function (e) {
+    e.preventDefault();
+
+    const model = this.collection.get(+$(e.target).attr('data-id'));
+    this.collection.remove(model);
+    updateLocalStorage(this.collection.toJSON());
+  },
+
+  initialize: function () {
+    this.listenTo(this.collection, 'remove reset rerender', this.render);
+  },
+});
+
 const ItemsCollection = Backbone.Collection.extend({
   lastID: 0,
   model: ItemModel,
@@ -25,44 +49,22 @@ const ItemsCollection = Backbone.Collection.extend({
     this.lastID++;
   },
 
-  sortBy: function (prop) {
-    this.models = _(this.models).sortBy(function (model) {
-      return model.attributes[prop];
-    });
-
-    App.render();
+  sortByProp: function (prop) {
+    this.comparator = prop;
+    this.sort();
+    this.trigger('rerender');
   },
 
   sortByName: function () {
-    this.sortBy('name');
+    this.sortByProp('name');
   },
 
   initialize: function () {
-    this.on('remove reset', App.render.bind(App));
     this.on('add', this.sortByName);
   },
 });
 
 const App = {
-  $body: $('tbody'),
-  template: Handlebars.compile($('#items').html()),
-
-  render: function () {
-    this.$body.html(this.template({ items: this.Items.models }));
-  },
-
-  removeItem: function (e) {
-    e.preventDefault();
-
-    const model = this.Items.get(+$(e.target).attr('data-id'));
-    this.Items.remove(model);
-    updateLocalStorage(this.Items.toJSON());
-  },
-
-  bind: function () {
-    this.$body.on('click', 'a', this.removeItem.bind(this));
-  },
-
   init: function () {
     if (
       typeof(Storage) === undefined
@@ -81,9 +83,8 @@ const App = {
       });
     }
 
+    this.View = new ItemsView({ collection: this.Items });
     this.Items.sortByName();
-    this.render();
-    this.bind();
   },
 };
 
@@ -105,7 +106,7 @@ $('form').on('submit', function (e) {
 
 $('th').on('click', function () {
   const prop = $(this).attr('data-prop');
-  App.Items.sortBy(prop);
+  App.Items.sortByProp(prop);
 });
 
 $('p a').on('click', function (e) {
